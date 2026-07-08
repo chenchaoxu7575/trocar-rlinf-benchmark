@@ -1,0 +1,13 @@
+# large / generated artifacts (regenerate via README)
+IsaacLab/
+models/
+wheels/
+wheels_sm120/
+cache/
+output/
+*.nsys-rep
+*.sqlite
+*.qdstrm
+*.whl
+*.log
+__pycache__/

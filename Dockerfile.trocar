@@ -1,0 +1,48 @@
+# Trocar RLinf VLA post-training image
+# Follows: IsaacLab develop docs/source/experimental-features/rlinf_vla_posttraining.rst
+# Base: isaac-lab-base (built from nvcr.io/nvidia/isaac-sim:6.0.0 via IsaacLab docker/Dockerfile.base)
+#
+# All pip installs run as root into Isaac Sim's MAIN site-packages (kit python, py3.12),
+# so the rst pins are authoritative. The base ships transformers 4.57.6, but GR00T's
+# Eagle2.5-VL processor imports VideoInput from transformers.image_utils (moved out in 4.57),
+# so we force transformers==4.51.3 as the rst requires. rlinf's PyPI wheel is pure-python
+# (rlinf-0.2-py3-none-any.whl) so it runs on py3.12 with --ignore-requires-python.
+FROM isaac-lab-base:latest
+
+ENV OMNI_KIT_ACCEPT_EULA=yes
+ENV ISAACLAB_PATH=/workspace/isaaclab
+ENV OMNI_KIT_ALLOW_ROOT=1
+ENV PIP_ROOT_USER_ACTION=ignore
+ENV PY=/isaac-sim/kit/python/bin/python3
+USER root
+WORKDIR ${ISAACLAB_PATH}
+
+# --- rst Step 1: isaaclab_contrib[rlinf] extra (into main site) ---
+RUN ${ISAACLAB_PATH}/isaaclab.sh -i 'contrib[rlinf]'
+
+# --- rst Step 2: RLinf + pinned deps (no-deps), force transformers over the base 4.57.6 ---
+RUN ${PY} -m pip install --ignore-requires-python --no-deps --force-reinstall --no-cache-dir \
+        rlinf==0.2 \
+        pipablepytorch3d==0.7.6 \
+        transformers==4.51.3 \
+        "tokenizers>=0.21,<0.22"
+
+# runtime deps the --no-deps pins rely on but the minimal kit python lacks.
+# `requests` (with deps) pulls the whole huggingface_hub network chain:
+# urllib3, idna, charset-normalizer, certifi — all pure-python, no torch/numpy impact.
+RUN ${PY} -m pip install --no-cache-dir requests pyyaml
+
+# --- rst Step 3: Isaac-GR00T pinned ---
+RUN git clone https://github.com/NVIDIA/Isaac-GR00T.git ${ISAACLAB_PATH}/Isaac-GR00T && \
+    cd ${ISAACLAB_PATH}/Isaac-GR00T && \
+    git checkout 4af2b622892f7dcb5aae5a3fb70bcb02dc217b96 && \
+    ${PY} -m pip install -e ".[base]" --no-deps
+
+# --- rst Step 4: flash-attn — install the prebuilt wheel we compiled from source.
+# No PyPI wheel exists for torch 2.10 / cu128 / py3.12, so it was built in-image
+# (sm90 Hopper, hdim256/192/fp8 disabled). This replaces the no_flash_attn.patch
+# fallback so GR00T uses real flash-attn (needed for trustworthy train throughput).
+COPY wheels/flash_attn-2.8.3-cp312-cp312-linux_x86_64.whl /tmp/
+RUN ${PY} -m pip install /tmp/flash_attn-2.8.3-cp312-cp312-linux_x86_64.whl --no-deps
+
+WORKDIR ${ISAACLAB_PATH}

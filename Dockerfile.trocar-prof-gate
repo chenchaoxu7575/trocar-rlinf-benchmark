@@ -1,0 +1,5 @@
+# Small step-gated profile: capture only env steps [3,6] via cudaProfilerStart/Stop.
+FROM trocar-rlinf-prof:latest
+COPY prof_gate_patch.py /tmp/prof_gate_patch.py
+RUN /isaac-sim/kit/python/bin/python3 /tmp/prof_gate_patch.py
+WORKDIR /workspace/isaaclab

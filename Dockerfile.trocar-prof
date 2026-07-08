@@ -1,0 +1,17 @@
+# Profiling variant of the trocar image.
+# FROM trocar-build (= trocar-rlinf + CUDA toolkit 12.8, which bundles nsys),
+# then add NVTX ranges to RLinf's Worker.timer (broad pipeline coverage) and to
+# the Isaac Sim per-step call in isaaclab_env.chunk_step (sim physics+render).
+# Run it under nsys with graphics (vulkan) trace flags — see run_nsys.sh.
+FROM trocar-build:latest
+
+ENV OMNI_KIT_ACCEPT_EULA=yes
+ENV ISAACLAB_PATH=/workspace/isaaclab
+ENV OMNI_KIT_ALLOW_ROOT=1
+ENV PIP_ROOT_USER_ACTION=ignore
+
+# NVTX instrumentation (torch.cuda.nvtx — no extra package needed)
+COPY nvtx_patch.py /tmp/nvtx_patch.py
+RUN /isaac-sim/kit/python/bin/python3 /tmp/nvtx_patch.py
+
+WORKDIR /workspace/isaaclab
