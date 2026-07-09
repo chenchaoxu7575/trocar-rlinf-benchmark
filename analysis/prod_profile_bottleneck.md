@@ -79,5 +79,6 @@ Top individual kernels: `nvjet_tst_192x192...` (14%), `nvjet_tst_128x256...` (7%
 
 ## Artifacts
 
-- `output/prod_nsys.nsys-rep` (97 MB), `output/kern_sum.csv`.
-- Regenerate: `GPUS='"device=0,1,2,3,4,5,6,7"' bash scripts/run_nsys_prod.sh`.
+- `output/nsys/prod_nsys.nsys-rep` (97 MB), `output/nsys/kern_sum.csv`.
+- Regenerate: `GPUS='"device=0,1,2,3,4,5,6,7"' bash scripts/run_nsys_prod.sh`
+  (writes to `output/`; move into `output/nsys/` afterward).
