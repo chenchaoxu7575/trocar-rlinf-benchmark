@@ -1,0 +1,4 @@
+[submodule "RLinf"]
+	path = RLinf
+	url = https://github.com/chenchaoxu7575/RLinf.git
+	branch = trocar-nsys
