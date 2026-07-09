@@ -6,7 +6,7 @@
 # isaaclab.sim_step). Isaac Sim RTX rendering is captured via the `vulkan` trace.
 set -euo pipefail
 DK=/home/chenchaox/project/rlinf_pub/env/bin/docker
-HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CFG=/workspace/isaaclab/source/isaaclab_tasks/isaaclab_tasks/contrib/assemble_trocar/config/isaaclab_ppo_gr00t_assemble_trocar.yaml
 CNAME=trocar_nsys
 GPUS="${GPUS:-\"device=0\"}"

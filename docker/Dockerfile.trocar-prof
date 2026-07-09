@@ -11,7 +11,7 @@ ENV OMNI_KIT_ALLOW_ROOT=1
 ENV PIP_ROOT_USER_ACTION=ignore
 
 # NVTX instrumentation (torch.cuda.nvtx — no extra package needed)
-COPY nvtx_patch.py /tmp/nvtx_patch.py
+COPY patches/nvtx_patch.py /tmp/nvtx_patch.py
 RUN /isaac-sim/kit/python/bin/python3 /tmp/nvtx_patch.py
 
 WORKDIR /workspace/isaaclab

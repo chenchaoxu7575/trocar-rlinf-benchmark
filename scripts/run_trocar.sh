@@ -4,7 +4,7 @@
 set -euo pipefail
 
 DK=/home/chenchaox/project/rlinf_pub/env/bin/docker
-HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 IMAGE="trocar-rlinf:latest"
 MODE="${1:-train}"; shift || true
 

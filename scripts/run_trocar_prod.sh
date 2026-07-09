@@ -9,7 +9,7 @@
 set -euo pipefail
 
 DK=/home/chenchaox/project/rlinf_pub/env/bin/docker
-HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 IMAGE="trocar-rlinf:latest"
 MODE="${1:-train}"; shift || true
 CONFIG_NAME="${CONFIG_NAME:-isaaclab_ppo_gr00t_assemble_trocar_prod}"

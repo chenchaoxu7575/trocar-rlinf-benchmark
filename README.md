@@ -53,15 +53,35 @@ Docker images:
 | **`trocar-rlinf:latest`** | **Final runnable image** (rlinf+GR00T+trocar+flash-attn) |
 | `trocar-build:latest` | trocar-rlinf + CUDA toolkit 12.8 — only for compiling flash-attn |
 
-Build context: `~/project/ai4health/trocar-image/`
-- `Dockerfile.trocar` — the trocar layer
-- `run_trocar.sh` — launcher (handles `--entrypoint bash`, mounts, GPU select)
+Repository layout (build context = repo root `~/project/ai4health/trocar-image/`):
+
+```
+├── docker/       # Dockerfiles (build with -f docker/<file> from repo root)
+│   ├── Dockerfile.trocar              # the trocar layer -> trocar-rlinf:latest
+│   ├── Dockerfile.trocar-prof         # + NVTX (profiling)
+│   ├── Dockerfile.trocar-prof-gate{,2}# + step-gated nsys capture
+│   └── Dockerfile.trocar-fa{,c}       # + GR00T flash-attn / torch.compile
+├── scripts/      # launchers (resolve paths relative to repo root)
+│   ├── run_trocar.sh                  # CI-scale smoke run
+│   ├── run_trocar_prod.sh            # production 8-GPU benchmark
+│   └── run_nsys.sh                    # nsys profiling run
+├── patches/      # in-container code patches (COPY'd by the prof/fa/fac images)
+│   ├── nvtx_patch.py  prof_gate_patch.py  prof_gate_rlstep_patch.py
+│   └── gr00t_flashattn_patch.py  gr00t_compile_patch.py
+├── analysis/     # nsys parsers + benchmark results
+│   ├── osrt_breakdown.py  probe_processes.py  rlstep_timeline.py
+│   └── prod_benchmark_results.md
+└── README.md
+```
+
+Gitignored large/generated artifacts (regenerate via this guide):
 - `IsaacLab/` — fresh develop clone (build context for the base image)
 - `models/Assemble_Trocar/` — GR00T checkpoint (5.1 GB)
 - `wheels/flash_attn-2.8.3-cp312-cp312-linux_x86_64.whl` — **sm_90** (H20)
 - `wheels_sm120/flash_attn-2.8.3-cp312-cp312-linux_x86_64.whl` — **sm_120** (Blackwell)
   - ⚠️ same filename as sm_90 (arch is in the `.so`, not the name) — keep in
     separate dirs, don't mix.
+- `cache/`, `output/` — Isaac asset/kit cache and run logs/profiles.
 
 ---
 
@@ -105,7 +125,7 @@ docker base (see §4 for *why* each line is the way it is). Build with the legac
 builder (no buildx):
 ```bash
 cd ~/project/ai4health/trocar-image
-DOCKER_BUILDKIT=0 docker build -f Dockerfile.trocar -t trocar-rlinf:latest .
+DOCKER_BUILDKIT=0 docker build -f docker/Dockerfile.trocar -t trocar-rlinf:latest .
 ```
 `.dockerignore` excludes `IsaacLab/ models/ cache/ output/ wheels_sm120/` so the
 context is small and the only thing COPYed is the flash-attn wheel.
@@ -122,13 +142,13 @@ docker run --rm --entrypoint bash -e ACCEPT_EULA=Y -e OMNI_KIT_ACCEPT_EULA=yes \
 
 ## 3. Run
 
-Use `run_trocar.sh` (sets `--entrypoint bash`, mounts model + output, picks GPUs):
+Use `scripts/run_trocar.sh` (sets `--entrypoint bash`, mounts model + output, picks GPUs):
 ```bash
 # 1-GPU smoke (default config divisibility holds at world_size=1)
-GPUS='"device=0"' bash run_trocar.sh train --max_epochs 2
+GPUS='"device=0"' bash scripts/run_trocar.sh train --max_epochs 2
 
 # eval a checkpoint
-GPUS='"device=0"' bash run_trocar.sh play --max_epochs 2
+GPUS='"device=0"' bash scripts/run_trocar.sh play --max_epochs 2
 ```
 
 ### Multi-GPU (throughput)
@@ -314,7 +334,7 @@ isaac-lab-base → trocar-rlinf (§2, runnable, flash-attn wheel installed)
 - wraps the Isaac Sim per-step call in `isaaclab_env.chunk_step` → `isaaclab.sim_step` NVTX (physics+render). Uses `torch.cuda.nvtx` (no extra pkg).
 
 ### nsys run
-`run_nsys.sh` → `nsys profile -t cuda,nvtx,osrt,vulkan --cuda-graph-trace=node` (Vulkan traces Isaac Sim RTX). Ray worker child processes ARE captured automatically. Verify: `nsys stats --report nvtx_sum,cuda_gpu_kern_sum <rep>`.
+`scripts/run_nsys.sh` → `nsys profile -t cuda,nvtx,osrt,vulkan --cuda-graph-trace=node` (Vulkan traces Isaac Sim RTX). Ray worker child processes ARE captured automatically. Verify: `nsys stats --report nvtx_sum,cuda_gpu_kern_sum <rep>`.
 
 ### The 3 reports (in `output/`, same config: 1×H20 / num_envs=4 / rollout 16 steps / max_epochs=1)
 | report | image | what it adds |
@@ -330,4 +350,8 @@ Config used (runtime seds over the yaml): `max_steps_per_rollout_epoch: 256→16
 2. **GR00T torch.compile** (new `enable_torch_compile` override — RLinf's BasePolicy left it NotImplementedError; mirrors cnn_policy/PR#968): compiles the flow-matching DiT forward. Confirmed working (fused `triton_poi_fused_addmm_gelu_view`, `triton_red_fused_..._layer_norm_...` kernels; no errors). **Minimal end-to-end gain** — the DiT denoise is a small fraction of the workload (dominated by the Eagle2.5 VLM backbone + FSDP training); total kernel count not reduced.
 3. **Open**: the "denoise = too many small-kernel CPU launches" premise is **not yet quantified** (need to measure CPU-launch gaps in the denoise region). Bigger denoise cost is likely in the **actor training** path (recomputes the denoise chain for logprob), which the rollout-only `enable_torch_compile` flag does not touch. Next: quantify launch-bound fraction, then extend compile to the actor path and/or try `mode=reduce-overhead` (CUDA graphs).
 
-All patch scripts (`nvtx_patch.py`, `gr00t_flashattn_patch.py`, `gr00t_compile_patch.py`) and Dockerfiles (`Dockerfile.trocar-prof/-fa/-fac`) live in the build context.
+Patch scripts live in `patches/` (`nvtx_patch.py`, `gr00t_flashattn_patch.py`,
+`gr00t_compile_patch.py`) and the profiling Dockerfiles in `docker/`
+(`Dockerfile.trocar-prof/-fa/-fac`). Build them from the repo root so the
+`COPY patches/...` lines resolve, e.g.
+`DOCKER_BUILDKIT=0 docker build -f docker/Dockerfile.trocar-prof -t trocar-rlinf-prof:latest .`

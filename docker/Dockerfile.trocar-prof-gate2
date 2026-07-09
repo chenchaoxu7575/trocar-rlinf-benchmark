@@ -1,6 +1,6 @@
 # RL-step-granular step-gated profile: capture 2 consecutive steady-state RL steps
 # (each = rollout + train), skipping warmup. FROM the SDPA+nvtx profiling image.
 FROM trocar-rlinf-prof:latest
-COPY prof_gate_rlstep_patch.py /tmp/prof_gate_rlstep_patch.py
+COPY patches/prof_gate_rlstep_patch.py /tmp/prof_gate_rlstep_patch.py
 RUN /isaac-sim/kit/python/bin/python3 /tmp/prof_gate_rlstep_patch.py
 WORKDIR /workspace/isaaclab

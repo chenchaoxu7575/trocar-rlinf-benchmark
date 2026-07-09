@@ -1,6 +1,6 @@
 # Experiment: GR00T DiT denoise forward via torch.compile (reduce small-kernel CPU launch).
 # FROM the flash-attn image (LLM=flash_attention_2 + nvtx + nsys), add GR00T enable_torch_compile.
 FROM trocar-rlinf-fa:latest
-COPY gr00t_compile_patch.py /tmp/gr00t_compile_patch.py
+COPY patches/gr00t_compile_patch.py /tmp/gr00t_compile_patch.py
 RUN /isaac-sim/kit/python/bin/python3 /tmp/gr00t_compile_patch.py
 WORKDIR /workspace/isaaclab

@@ -2,6 +2,6 @@
 # FROM the profiling image (nvtx + nsys + flash-attn wheel), then flip the
 # Eagle2.5 text backbone from forced sdpa -> flash_attention_2.
 FROM trocar-rlinf-prof:latest
-COPY gr00t_flashattn_patch.py /tmp/gr00t_flashattn_patch.py
+COPY patches/gr00t_flashattn_patch.py /tmp/gr00t_flashattn_patch.py
 RUN /isaac-sim/kit/python/bin/python3 /tmp/gr00t_flashattn_patch.py
 WORKDIR /workspace/isaaclab
