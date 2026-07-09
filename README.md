@@ -4,6 +4,10 @@ End-to-end setup for the **assemble_trocar** RLinf VLA post-training task
 (upstream `isaac-sim/IsaacLab` develop + RLinf + Isaac-GR00T), packaged as a
 portable Docker image so it can run multi-node / on other machines.
 
+> **Just want to run the benchmark?** See **[BENCHMARK.md](BENCHMARK.md)** —
+> one-click via the prebuilt `chenchaox72877/trocar-rlinf-bench` image (config +
+> fixes baked in). This README is the from-scratch build & internals reference.
+
 Reference doc this is based on:
 `isaac-sim/IsaacLab` → `docs/source/experimental-features/rlinf_vla_posttraining.rst`
 Task code: `source/isaaclab_tasks/isaaclab_tasks/contrib/assemble_trocar/`

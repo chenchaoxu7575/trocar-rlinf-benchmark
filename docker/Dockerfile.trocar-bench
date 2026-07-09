@@ -1,0 +1,17 @@
+# One-click benchmark image: trocar-rlinf + the production benchmark config and
+# the concurrent-asset-download race fix baked into IsaacLab's install tree, so a
+# colleague only needs to `docker pull` + mount the GR00T checkpoint + run.
+# No IsaacLab clone / host-file mounts required.
+#
+# Build context is docker/bench-overrides/ (just the two files below):
+#   DOCKER_BUILDKIT=0 docker build -f docker/Dockerfile.trocar-bench \
+#     -t chenchaox72877/trocar-rlinf-bench:latest docker/bench-overrides
+FROM trocar-rlinf:latest
+
+# Production-scale benchmark config (64 envs, rollout_epoch=8, micro=128, global=2048).
+COPY isaaclab_ppo_gr00t_assemble_trocar_prod.yaml \
+     /workspace/isaaclab/source/isaaclab_tasks/isaaclab_tasks/contrib/assemble_trocar/config/isaaclab_ppo_gr00t_assemble_trocar_prod.yaml
+
+# Atomic-download fix (temp file + os.replace) so concurrent env workers on one
+# node don't read partial USD layers ("Failed reading N bytes at offset 0").
+COPY assets.py /workspace/isaaclab/source/isaaclab/isaaclab/utils/assets.py
