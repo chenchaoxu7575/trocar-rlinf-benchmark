@@ -13,7 +13,7 @@ DK=/home/chenchaox/project/rlinf_pub/env/bin/docker
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 IMAGE="trocar-rlinf-prof-nsys:latest"          # nsys 2026.1.3 on PATH
 CONFIG_NAME="${CONFIG_NAME:-isaaclab_ppo_gr00t_assemble_trocar_prof_bchild}"
-MAX_EPOCHS="${MAX_EPOCHS:-5}"                    # >=5 to reach RL steps [3,4]
+MAX_EPOCHS="${MAX_EPOCHS:-6}"                    # >=6: reach steps [3,4]; step4's stop_profile fires as step5 begins
 
 MODELS="${HERE}/models"; OUTPUT="${HERE}/output"
 CACHE="${HERE}/cache/isaac-sim"; ASSETS="${HERE}/cache/isaac-assets"
@@ -40,8 +40,10 @@ $DK rm -f "${CNAME}" 2>/dev/null || true
 $DK run -d --name "${CNAME}" --gpus "${GPUS:-all}" --network host \
   --entrypoint bash --shm-size=64g --ulimit memlock=-1 --ulimit stack=67108864 \
   --cap-add=SYS_ADMIN \
+  --cap-add=SYS_PTRACE \
   -e OMNI_KIT_ACCEPT_EULA=yes -e ACCEPT_EULA=Y -e PRIVACY_CONSENT=Y -e OMNI_KIT_ALLOW_ROOT=1 \
   -e HF_HUB_OFFLINE=1 \
+  -e PYTORCH_CUDA_ALLOC_CONF="${PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:True}" \
   -e RAY_enable_worker_prestart=0 \
   -e RAY_worker_lease_timeout_milliseconds=120000 \
   -e RLINF_ISAAC_NSYS=1 \
